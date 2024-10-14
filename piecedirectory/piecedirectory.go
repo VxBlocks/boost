@@ -20,16 +20,22 @@ import (
 	"github.com/filecoin-project/boost/lib/sa"
 	"github.com/filecoin-project/boost/node/config"
 	"github.com/filecoin-project/boost/piecedirectory/types"
+	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-data-segment/datasegment"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/lotus/lib/readerutil"
+	"github.com/hashicorp/go-multierror"
 	bstore "github.com/ipfs/boxo/blockstore"
+	"github.com/ipfs/go-cid"
 	format "github.com/ipfs/go-ipld-format"
 	logging "github.com/ipfs/go-log/v2"
+	"github.com/ipld/go-car"
 	"github.com/ipld/go-car/util"
 	carv2 "github.com/ipld/go-car/v2"
 	"github.com/ipld/go-car/v2/blockstore"
 	carindex "github.com/ipld/go-car/v2/index"
+	"github.com/jellydator/ttlcache/v2"
+	"github.com/multiformats/go-multihash"
 	mh "github.com/multiformats/go-multihash"
 	"go.opentelemetry.io/otel/attribute"
 	"golang.org/x/sync/errgroup"
@@ -1001,7 +1007,7 @@ func (ps *PieceDirectory) GetBlockstore(ctx context.Context, pieceCid cid.Cid) (
 		bsR = carutil.NewMultiReaderAt(
 			bytes.NewReader(headerBuf.Bytes()),        // payload (CARv1) header
 			bytes.NewReader(make([]byte, dataOffset)), // padding to account for the CARv2 wrapper
-			sectionReader,                             // payload (CARv1) data
+			sectionReader, // payload (CARv1) data
 		)
 	} else {
 		bsR = reader

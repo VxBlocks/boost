@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/filecoin-project/go-address"
+	"github.com/multiformats/go-multiaddr"
 	"os"
 
 	"github.com/filecoin-project/lotus/api"

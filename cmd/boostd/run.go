@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/filecoin-project/boost/cmd"
+	"github.com/urfave/cli/v2"
 	"net/http"
 	_ "net/http/pprof"
 	"strings"
