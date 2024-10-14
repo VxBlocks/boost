@@ -22,20 +22,24 @@ import (
 	"github.com/manifoldco/promptui"
 )
 
-func CreateAllocationRequests(ctx context.Context, api api.Gateway, infos []PieceInfos) (*big.Int, []verifreg9.AllocationRequest, error) {
-	var allocationRequests []verifreg9.AllocationRequest
-	rDataCap := big.NewInt(0)
+func CreateAllocationMsg(ctx context.Context, api api.Gateway, infos []PieceInfos, wallet address.Address, batchSize int) ([]*types.Message, error) {
+
 	head, err := api.ChainHead(ctx)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
+
+	rDataCap := big.NewInt(0)
+
+	// Create allocation requests
+	var allocationRequests []verifreg9.AllocationRequest
 	for _, info := range infos {
 		minfo, err := api.StateMinerInfo(ctx, info.MinerAddr, types.EmptyTSK)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 		if uint64(minfo.SectorSize) < uint64(info.Size) {
-			return nil, nil, fmt.Errorf("specified piece size %d is bigger than miner's sector size %s", info.Size, minfo.SectorSize.String())
+			return nil, fmt.Errorf("specified piece size %d is bigger than miner's sector size %s", info.Size, minfo.SectorSize.String())
 		}
 		allocationRequests = append(allocationRequests, verifreg9.AllocationRequest{
 			Provider:   info.Miner,
@@ -46,15 +50,6 @@ func CreateAllocationRequests(ctx context.Context, api api.Gateway, infos []Piec
 			Expiration: head.Height() + info.Exp,
 		})
 		rDataCap.Add(big.NewInt(info.Size).Int, rDataCap.Int)
-	}
-	return &rDataCap, allocationRequests, nil
-}
-
-func CreateAllocationMsg(ctx context.Context, api api.Gateway, infos []PieceInfos, wallet address.Address, batchSize int) ([]*types.Message, error) {
-	// Create allocation requests
-	rDataCap, allocationRequests, err := CreateAllocationRequests(ctx, api, infos)
-	if err != nil {
-		return nil, err
 	}
 
 	// Get datacap balance
@@ -83,19 +78,15 @@ func CreateAllocationMsg(ctx context.Context, api api.Gateway, infos []PieceInfo
 		arequest := &verifreg9.AllocationRequests{
 			Allocations: batch,
 		}
-		bDataCap := big.NewInt(0)
-		for _, bd := range batch {
-			bDataCap.Add(big.NewInt(int64(bd.Size)).Int, bDataCap.Int)
-		}
 
 		receiverParams, err := actors.SerializeParams(arequest)
 		if err != nil {
-			return nil, fmt.Errorf("failed to serialize the parameters: %w", err)
+			return nil, fmt.Errorf("failed to seralize the parameters: %w", err)
 		}
 
 		transferParams, err := actors.SerializeParams(&datacap.TransferParams{
 			To:           builtin.VerifiedRegistryActorAddr,
-			Amount:       big.Mul(bDataCap, builtin.TokenPrecision),
+			Amount:       big.Mul(rDataCap, builtin.TokenPrecision),
 			OperatorData: receiverParams,
 		})
 

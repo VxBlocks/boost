@@ -5,9 +5,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/filecoin-project/boost/cmd"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/filecoin-project/boost/build"
@@ -21,12 +23,8 @@ import (
 	"github.com/filecoin-project/boost/node/config"
 	"github.com/filecoin-project/boost/piecedirectory"
 	"github.com/filecoin-project/dagstore/mount"
-	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
 	lcli "github.com/filecoin-project/lotus/cli"
-	"github.com/ipfs/go-cid"
-	"github.com/mitchellh/go-homedir"
-	"github.com/urfave/cli/v2"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
 	"go.opencensus.io/tag"
@@ -173,6 +171,12 @@ var runCmd = &cli.Command{
 			Name:  "no-metrics",
 			Usage: "stops emitting information about the node as metrics (param is used by tests)",
 		},
+		// TODO boost retrieval car file
+		&cli.StringFlag{
+			Name:    "car-urls",
+			Usage:   "car server urls, split using semicolon",
+			EnvVars: []string{"CAR_SERVER_URLS"},
+		},
 	},
 	Action: func(cctx *cli.Context) error {
 		servePieces := cctx.Bool("serve-pieces")
@@ -303,6 +307,14 @@ var runCmd = &cli.Command{
 				return err
 			}
 		}
+
+		// TODO boost retrieval car file
+		carUrls := cctx.String("car-urls")
+		if len(carUrls) == 0 || len(strings.Split(carUrls, ":")) < 2 {
+			return fmt.Errorf("car server urls len 0")
+		}
+		cmd.SetEnv("CAR_SERVER_URLS", cctx.String("car-urls"))
+		cmd.ShowEnv(log)
 
 		sapi := serverApi{ctx: ctx, piecedirectory: pd, sa: sa}
 		server := NewHttpServer(

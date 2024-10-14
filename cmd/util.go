@@ -4,13 +4,32 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 
-	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/lotus/api"
 	"github.com/filecoin-project/lotus/chain/types"
+	logging "github.com/ipfs/go-log/v2"
 	"github.com/libp2p/go-libp2p/core/peer"
-	"github.com/multiformats/go-multiaddr"
 )
+
+// TODO boost retrieval car file
+func ShowEnv(logg *logging.ZapEventLogger) {
+	logg.Infof("CAR_SERVER_URLS: %s", checkEnv("CAR_SERVER_URLS", false))
+}
+
+func SetEnv(k, v string) {
+	os.Setenv(k, v)
+}
+
+func checkEnv(env string, must bool) string {
+	e := os.Getenv(env)
+	if e == "" {
+		if must {
+			panic(fmt.Sprintf("env: %s can't empty", env))
+		}
+	}
+	return e
+}
 
 func GetAddrInfo(ctx context.Context, api api.Gateway, maddr address.Address) (*peer.AddrInfo, error) {
 	minfo, err := api.StateMinerInfo(ctx, maddr, types.EmptyTSK)

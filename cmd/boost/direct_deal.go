@@ -7,9 +7,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/ipfs/go-datastore"
-	ds_sync "github.com/ipfs/go-datastore/sync"
-
 	bcli "github.com/filecoin-project/boost/cli"
 	clinode "github.com/filecoin-project/boost/cli/node"
 	"github.com/filecoin-project/boost/cmd"
@@ -88,15 +85,6 @@ var directDealAllocate = &cli.Command{
 			Usage: "number of block confirmations to wait for",
 			Value: int(build.MessageConfidence),
 		},
-		&cli.BoolFlag{
-			Name:    "assume-yes",
-			Usage:   "automatic yes to prompts; assume 'yes' as answer to all prompts and run non-interactively",
-			Aliases: []string{"y", "yes"},
-		},
-		&cli.StringFlag{
-			Name:  "evm-client-contract",
-			Usage: "f4 address of EVM contract to spend DataCap from",
-		},
 	},
 	Before: before,
 	Action: func(cctx *cli.Context) error {
@@ -105,7 +93,6 @@ var directDealAllocate = &cli.Command{
 		pieceFile := cctx.String("piece-file")
 		miners := cctx.StringSlice("miner")
 		pinfos := cctx.StringSlice("piece-info")
-
 		if pieceFile == "" && len(pinfos) < 1 {
 			return fmt.Errorf("must provide at least one --piece-info or use --piece-file")
 		}
@@ -261,40 +248,21 @@ var directDealAllocate = &cli.Command{
 
 		log.Debugw("selected wallet", "wallet", walletAddr)
 
-		var msgs []*types.Message
-		var allocationsAddr address.Address
-		if cctx.IsSet("evm-client-contract") {
-			evmContract := cctx.String("evm-client-contract")
-			if evmContract == "" {
-				return fmt.Errorf("evm-client-contract can't be empty")
-			}
-			evmContractAddr, err := address.NewFromString(evmContract)
-			if err != nil {
-				return err
-			}
-			allocationsAddr = evmContractAddr
-			msgs, err = util.CreateAllocationViaEVMMsg(ctx, gapi, pieceInfos, walletAddr, evmContractAddr, cctx.Int("batch-size"))
-			if err != nil {
-				return err
-			}
-		} else {
-			allocationsAddr = walletAddr
-			msgs, err = util.CreateAllocationMsg(ctx, gapi, pieceInfos, walletAddr, cctx.Int("batch-size"))
-			if err != nil {
-				return err
-			}
+		msgs, err := util.CreateAllocationMsg(ctx, gapi, pieceInfos, walletAddr, cctx.Int("batch-size"))
+
+		if err != nil {
+			return err
 		}
 
-		oldallocations, err := gapi.StateGetAllocations(ctx, allocationsAddr, types.EmptyTSK)
+		oldallocations, err := gapi.StateGetAllocations(ctx, walletAddr, types.EmptyTSK)
 		if err != nil {
 			return fmt.Errorf("failed to get allocations: %w", err)
 		}
 
 		var mcids []cid.Cid
 
-		ds := ds_sync.MutexWrap(datastore.NewMapDatastore())
 		for _, msg := range msgs {
-			mcid, sent, err := lib.SignAndPushToMpool(cctx, ctx, gapi, n, ds, msg)
+			mcid, sent, err := lib.SignAndPushToMpool(cctx, ctx, gapi, n, msg)
 			if err != nil {
 				return err
 			}
@@ -310,7 +278,7 @@ var directDealAllocate = &cli.Command{
 			mcidStr = append(mcidStr, c.String())
 		}
 
-		log.Infow("submitted data cap allocation message[s]", "CID", mcidStr)
+		log.Infow("submitted data cap allocation message[s]", mcidStr)
 		log.Info("waiting for message to be included in a block")
 
 		// wait for msgs to get mined into a block
@@ -341,7 +309,7 @@ var directDealAllocate = &cli.Command{
 			return nil
 		}
 
-		newallocations, err := gapi.StateGetAllocations(ctx, allocationsAddr, types.EmptyTSK)
+		newallocations, err := gapi.StateGetAllocations(ctx, walletAddr, types.EmptyTSK)
 		if err != nil {
 			return fmt.Errorf("failed to get allocations: %w", err)
 		}
@@ -666,9 +634,9 @@ If the client id different then claim can be extended up to maximum 5 years from
 		}
 
 		var mcids []cid.Cid
-		ds := ds_sync.MutexWrap(datastore.NewMapDatastore())
+
 		for _, msg := range msgs {
-			mcid, sent, err := lib.SignAndPushToMpool(cctx, ctx, gapi, n, ds, msg)
+			mcid, sent, err := lib.SignAndPushToMpool(cctx, ctx, gapi, n, msg)
 			if err != nil {
 				return err
 			}

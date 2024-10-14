@@ -2,8 +2,10 @@ package main
 
 import (
 	"fmt"
+	"github.com/filecoin-project/boost/cmd"
 	"net/http"
 	_ "net/http/pprof"
+	"strings"
 	"time"
 
 	"github.com/filecoin-project/boost/api"
@@ -23,8 +25,6 @@ import (
 
 	lcliutil "github.com/filecoin-project/lotus/cli/util"
 	lotus_repo "github.com/filecoin-project/lotus/node/repo"
-
-	"github.com/urfave/cli/v2"
 )
 
 var runCmd = &cli.Command{
@@ -43,6 +43,12 @@ var runCmd = &cli.Command{
 		&cli.BoolFlag{
 			Name:  "no-metrics",
 			Usage: "stops emitting information about the node as metrics (param is used by tests)",
+		},
+		// TODO boost retrieval car file
+		&cli.StringFlag{
+			Name:    "car-urls",
+			Usage:   "car server urls, split using semicolon",
+			EnvVars: []string{"CAR_SERVER_URLS"},
 		},
 	},
 	Action: func(cctx *cli.Context) error {
@@ -167,6 +173,14 @@ var runCmd = &cli.Command{
 		}
 
 		log.Infow("Boost JSON RPC server is listening", "endpoint", endpoint)
+
+		// TODO boost retrieval car file
+		carUrls := cctx.String("car-urls")
+		if len(carUrls) == 0 || len(strings.Split(carUrls, ":")) < 2 {
+			return fmt.Errorf("car server urls len 0")
+		}
+		cmd.SetEnv("CAR_SERVER_URLS", cctx.String("car-urls"))
+		cmd.ShowEnv(log)
 
 		// Serve the RPC.
 		rpcStopper, err := node.ServeRPC(handler, "boost", endpoint)

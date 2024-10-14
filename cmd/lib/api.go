@@ -2,6 +2,7 @@ package lib
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -89,7 +90,10 @@ func GetMinerApi(ctx context.Context, ai string, log *logging.ZapEventLogger) (v
 }
 
 func StorageAuthWithURL(apiInfo string) (sealer.StorageAuth, error) {
-	s := strings.SplitN(apiInfo, ":", 2)
+	s := strings.Split(apiInfo, ":")
+	if len(s) != 2 {
+		return nil, errors.New("unexpected format of `apiInfo`")
+	}
 	headers := http.Header{}
 	headers.Add("Authorization", "Bearer "+s[0])
 	return sealer.StorageAuth(headers), nil

@@ -15,9 +15,6 @@ import (
 	"github.com/filecoin-project/boost/extern/boostd-data/shared/tracing"
 	"github.com/filecoin-project/boost/metrics"
 	"github.com/filecoin-project/boost/retrievalmarket/types/legacyretrievaltypes"
-	"github.com/hashicorp/go-multierror"
-	"github.com/ipfs/go-cid"
-	"github.com/ipfs/go-datastore"
 	"github.com/ipld/frisbii"
 	"go.opencensus.io/stats"
 )
@@ -87,8 +84,11 @@ func (s *HttpServer) getPieceContent(ctx context.Context, pieceCid cid.Cid) (io.
 		return nil, fmt.Errorf("getting unsealed CAR file: %w", err)
 	}
 
+	// TODO boost retrieval car file
+	baseCtx := context.WithValue(ctx, "pieceCid", pieceCid.String())
+
 	// Get the raw piece data from the sector
-	pieceReader, err := s.api.UnsealSectorAt(ctx, di.MinerAddr, di.SectorID, di.PieceOffset.Unpadded(), di.PieceLength.Unpadded())
+	pieceReader, err := s.api.UnsealSectorAt(baseCtx, di.MinerAddr, di.SectorID, di.PieceOffset.Unpadded(), di.PieceLength.Unpadded())
 	if err != nil {
 		return nil, fmt.Errorf("getting raw data from sector %d: %w", di.SectorID, err)
 	}

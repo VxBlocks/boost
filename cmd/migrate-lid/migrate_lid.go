@@ -123,14 +123,6 @@ var migrateYugabyteDBCmd = &cli.Command{
 			Required: true,
 		},
 		&cli.StringFlag{
-			Name:  "username",
-			Usage: "yugabyte username to connect to over cassandra interface eg 'cassandra'",
-		},
-		&cli.StringFlag{
-			Name:  "password",
-			Usage: "yugabyte password to connect to over cassandra interface eg 'cassandra'",
-		},
-		&cli.StringFlag{
 			Name:     "connect-string",
 			Usage:    "postgres connect string eg 'postgresql://postgres:postgres@localhost'",
 			Required: true,
@@ -162,8 +154,6 @@ var migrateYugabyteDBCmd = &cli.Command{
 		// Create a connection to the yugabyte local index directory
 		settings := yugabyte.DBSettings{
 			Hosts:                    cctx.StringSlice("hosts"),
-			Username:                 cctx.String("username"),
-			Password:                 cctx.String("password"),
 			ConnectString:            cctx.String("connect-string"),
 			PayloadPiecesParallelism: cctx.Int("insert-parallelism"),
 			CQLTimeout:               cctx.Int("CQLTimeout"),
@@ -657,14 +647,6 @@ var migrateReverseYugabyteCmd = &cli.Command{
 			Required: true,
 		},
 		&cli.StringFlag{
-			Name:  "username",
-			Usage: "yugabyte username to connect to over cassandra interface eg 'cassandra'",
-		},
-		&cli.StringFlag{
-			Name:  "password",
-			Usage: "yugabyte password to connect to over cassandra interface eg 'cassandra'",
-		},
-		&cli.StringFlag{
 			Name:     "connect-string",
 			Usage:    "postgres connect string eg 'postgresql://postgres:postgres@localhost'",
 			Required: true,
@@ -709,8 +691,6 @@ func migrateReverse(cctx *cli.Context, dbType string) error {
 		settings := yugabyte.DBSettings{
 			ConnectString:            cctx.String("connect-string"),
 			Hosts:                    cctx.StringSlice("hosts"),
-			Username:                 cctx.String("username"),
-			Password:                 cctx.String("password"),
 			PayloadPiecesParallelism: cctx.Int("insert-parallelism"),
 		}
 		migrator := yugabyte.NewMigrator(settings, migrations.DisabledMinerAddr)
